@@ -1,21 +1,90 @@
-from tkinter import END, BOTH, WORD, Scrollbar, RIGHT
+from tkinter import END, BOTH, WORD, Scrollbar, RIGHT, filedialog
 from ttkbootstrap import Style, Button, Label, Entry, Text, Frame
 from ttkbootstrap.constants import SUCCESS, DANGER
-from salvar_dados import *
-from raspagem_dados import *
+from bs4 import BeautifulSoup
+import requests
+from datetime import datetime
+
+# Variável global para armazenar os dados raspados
+scraped_data = []
+url = 0
+raspar = 0
+data = 0
+hora = 0
+
+def data_hora():
+    global data, hora
+    data_hora_atual = datetime.now()
+    data = data_hora_atual.strftime("%d/%m/%Y")
+    hora = data_hora_atual.strftime("%H:%M:%S")
+
+# Função para realizar o web scraping
+def scrape_website(url_entry, raspar_entry, result_text):
+    global scraped_data, url, raspar
+
+    url = url_entry.get()
+    raspar = raspar_entry.get()
+    
+    if not url:
+        result_text.delete(1.0, END)
+        result_text.insert(END, "Por favor, insira uma URL válida.")
+        return
+    
+    if not raspar:
+        result_text.delete(1.0, END)
+        result_text.insert(END, "Por favor, insira um elemento HTML para raspar.")
+        return
+
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, 'html.parser')
+        raspagem = [dado.text for dado in soup.find_all(raspar)]
+        
+        result_text.delete(1.0, END)
+        for dado in raspagem:
+            result_text.insert(END, dado + "\n")
+        
+        scraped_data = raspagem
+
+    except Exception as e:
+        result_text.delete(1.0, END)
+        result_text.insert(END, f"Erro ao acessar a URL: {e}")
+
+# Função para salvar os resultados em um arquivo TXT
+def save_to_txt(result_text):
+    data_hora() # Atualiza sempre a data e a hora
+    global scraped_data, url, raspar, data, hora
+
+    if not scraped_data:
+        result_text.insert(END, "\nNenhum dado para salvar.", "red")
+        return
+
+    file_path = filedialog.asksaveasfilename(defaultextension=".txt", filetypes=[("Text Files", "*.txt")])
+    if file_path:
+        try:
+            with open(file_path, "w", encoding="utf-8") as file:
+                file.write(f"URL: {url}\n")
+                file.write(f"Raspagem: {raspar}\n")
+                file.write(f"Data: {data}\n")
+                file.write(f"Hora: {hora}\n\n")
+                for dado in scraped_data:
+                    file.write(dado + "\n")
+            result_text.insert(END, f"\nDados salvos em: {file_path}", "green")
+        except Exception as e:
+            result_text.insert(END, f"\nErro ao salvar o arquivo: {e}", "red")
 
 # Função para limpar os resultados
 def clear_results():
+    global scraped_data
     url_entry.delete(0, END)
     raspar_entry.delete(0, END)
     result_text.delete(1.0, END)
-    global scraped_data
     scraped_data = []
 
 # Configuração inicial da interface gráfica
 def setup_gui():
-    global url_entry, result_text, scraped_data, raspar_entry
-    scraped_data = []
+    global url_entry, result_text, raspar_entry
 
     # Configuração do tema Cyborg
     style = Style(theme="cyborg")
@@ -40,7 +109,12 @@ def setup_gui():
     raspar_entry.grid(row=1, column=1, sticky="ew", pady=5)
 
     # Botão de scraping
-    scrape_button = Button(main_frame, text="Raspar Dados", command=lambda:scrape_website(url_entry, raspar_entry, result_text), bootstyle=SUCCESS)
+    scrape_button = Button(
+        main_frame,
+        text="Raspar Dados",
+        command=lambda: scrape_website(url_entry, raspar_entry, result_text),
+        bootstyle=SUCCESS
+    )
     scrape_button.grid(row=0, column=2, rowspan=2, padx=10, pady=5, sticky="nsew")
 
     # Área de resultados
@@ -62,10 +136,20 @@ def setup_gui():
     action_frame = Frame(main_frame)
     action_frame.grid(row=3, column=0, columnspan=3, pady=10, sticky="ew")
 
-    save_button = Button(action_frame, text="Salvar em Excel", command=lambda:save_to_excel(scraped_data, result_text), bootstyle=SUCCESS)
+    save_button = Button(
+        action_frame,
+        text="Salvar em Excel",
+        command=lambda: save_to_txt(result_text),
+        bootstyle=SUCCESS
+    )
     save_button.pack(side=RIGHT, padx=5)
     
-    clear_button = Button(action_frame, text="Limpar Resultados", command=clear_results, bootstyle=DANGER)
+    clear_button = Button(
+        action_frame,
+        text="Limpar Resultados",
+        command=clear_results,
+        bootstyle=DANGER
+    )
     clear_button.pack(side=RIGHT, padx=5)
 
     # Configuração de redimensionamento
@@ -77,18 +161,3 @@ def setup_gui():
 # Execução do programa
 if __name__ == "__main__":
     setup_gui()
-
-"""
-MELHORIAS:
-
-1. **Validação de URL**: Implementar uma validação mais robusta para garantir que a URL inserida seja válida. 
-2. **Escolha de Elementos**: Permitir que o usuário escolha quais elementos HTML deseja raspar (ex.: h1, p, div). V
-3. **Progresso Visual**: Adicionar uma barra de progresso ou indicador de status durante o processo de scraping.
-4. **Tratamento de Erros**: Melhorar o tratamento de erros para diferentes tipos de falhas (ex.: timeout, conexão recusada).
-5. **Interface Responsiva**: Usar layouts mais avançados para garantir que a interface seja totalmente responsiva.
-6. **Exportação em Múltiplos Formatos**: Permitir exportação em outros formatos além do Excel, como CSV ou JSON.
-7. **Cache de Dados**: Implementar um cache para evitar múltiplas requisições à mesma URL em curtos intervalos.
-8. **Autenticação**: Adicionar suporte para sites que exigem autenticação (ex.: login via POST).
-9. **Documentação**: Incluir uma documentação detalhada para facilitar o uso e manutenção do programa.
-10. **Testes Automatizados**: Criar testes automatizados para verificar a funcionalidade do programa em diferentes cenários.
-"""
