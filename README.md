@@ -22,5 +22,6 @@ Um programa de Web Scraping com interface gráfica moderna, construído em Pytho
    - Python 3.6 ou superior
 
 2. **Dependências**:
+
    ```bash
-   pip install ttkbootstrap requests beautifulsoup4
+   pip install ttkbootstrap requests beautifulsoup4 openpyxl pandas
