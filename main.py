@@ -138,7 +138,7 @@ def setup_gui():
 
     save_button = Button(
         action_frame,
-        text="Salvar em Excel",
+        text="Salvar",
         command=lambda: save_to_txt(result_text),
         bootstyle=SUCCESS
     )
@@ -161,3 +161,6 @@ def setup_gui():
 # Execução do programa
 if __name__ == "__main__":
     setup_gui()
+
+# Fazer um log
+# Fazer um status em quanto raspa
